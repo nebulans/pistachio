@@ -11,6 +11,8 @@ from utility import requireKwargs
 
 class Source(object):
 	layerIndex = 0
+	lastElement = False
+	hangingConnections = 0
 	def __init__(self, parent, name, type, **kwargs):
 		self.parent = parent
 		self.name = name
@@ -31,6 +33,9 @@ class Source(object):
 		self.rateFilter.set_property("caps", self.rateCaps)
 		self.rate = gst.element_factory_make("videorate", "%srate"%name)
 		
+		self.parent.pipeline.add(self.alpha, self.scaleFilter, self.scaler, self.rateFilter, self.rate)
+		
+		
 		# Create holder for list of elements created
 		self.elements = []
 		# Add initial elements as required		
@@ -40,17 +45,25 @@ class Source(object):
 				raise Exception()
 			self.src = gst.element_factory_make("filesrc", "%ssrc"%name)
 			self.src.set_property("location", kwargs["location"])
-			self.decoder = gst.element_factory_make("pngdec", "%sdec"%name)
+			self.decoder = gst.element_factory_make("decodebin", "%sdec|%scolspace"%(name, name))
 			self.freeze = gst.element_factory_make("imagefreeze", "%sfreeze"%name)
-			self.colorspace = gst.element_factory_make("ffmpegcolorspace")
-			self.elements.extend([self.src, self.decoder, self.colorspace, self.scaler, self.scaleFilter, self.freeze,  self.alpha, self.rateFilter])
+			self.colorspace = gst.element_factory_make("ffmpegcolorspace", "%scolspace"%name)
+			self.parent.pipeline.add(self.src, self.decoder, self.freeze, self.colorspace)
+			gst.element_link_many(self.src, self.decoder)
+			gst.element_link_many(self.colorspace, self.scaler, self.scaleFilter, self.freeze,  self.alpha, self.rateFilter)
+			self.lastElement = self.rateFilter
+			self.decoder.connect("new-decoded-pad", self.new_decoded_pad)
+			self.hangingConnections += 1
+			self.parent.asyncStart = True
 		elif type == "pattern":
 			if not requireKwargs(kwargs, ["pattern"]):
 				print "Incorrect arguments supplied"
 				raise Exception()
 			self.src = gst.element_factory_make("videotestsrc", "%ssrc"%name)
 			self.src.set_property("pattern", kwargs["pattern"])
-			self.elements.extend([self.src, self.scaler, self.scaleFilter, self.alpha, self.rateFilter])	
+			self.parent.pipeline.add(self.src)
+			gst.element_link_many(self.src, self.scaler, self.scaleFilter, self.alpha, self.rateFilter)
+			self.lastElement = self.rateFilter	
 	def setInitial(self):
 		# Set initial clock value
 		self.initialClock = self.alpha.get_clock().get_time()
@@ -60,8 +73,14 @@ class Source(object):
 		t = start * gst.SECOND + self.alpha.get_clock().get_time() - self.parent.initialTimes[self.alpha.get_property("name")]
 		self.control.set("alpha", t, self.alpha.get_property("alpha"))
 		self.control.set("alpha", t + gst.SECOND * time + 1, value)
-		
-		
+	def new_decoded_pad(self, dbin, pad, islast):
+		decode = pad.get_parent()
+		pipeline = decode.get_parent()
+		nextName = decode.get_property("name").split("|")[1]
+		n = pipeline.get_by_name(nextName)
+		decode.link(n)
+		self.hangingConnections -= 1
+		self.parent.ready()
 	
 
 class SourceMixer(object):
@@ -70,6 +89,7 @@ class SourceMixer(object):
 	fadeSteps = 100	# Number of crossfade steps
 	layerIndex = 0
 	activeSource = False
+	asyncStart = False	# Use async start to allow connections to decode to negotiate
 	def __init__(self, window):
 		self.window = window
 		# Set up pipeline
@@ -81,16 +101,13 @@ class SourceMixer(object):
 		self.sink = gst.element_factory_make("autovideosink")
 		self.pipeline.add(self.mixer, self.outConvert, self.sink)
 		gst.element_link_many(self.mixer, self.outConvert, self.sink)
-		#self.pipeline.add(self.outConvert, self.sink)
-		#gst.element_link_many(self.outConvert, self.sink)
 		# Create holder for sources
 		self.sources = {}
 		self.initialTimes = {}
 	def addSource(self, name, type, **kwargs):
 		if not self.sources.get(name, False):
 			self.sources[name] = Source(self, name, type,  **kwargs)
-			self.pipeline.add(*self.sources[name].elements)
-			gst.element_link_many(*self.sources[name].elements + [self.mixer])
+			self.sources[name].lastElement.link(self.mixer)
 			self.sources[name].layerIndex = self.layerIndex
 			self.layerIndex += 1
 		else:
@@ -102,7 +119,18 @@ class SourceMixer(object):
 		self.bus.connect("message", self.on_message)
 		self.bus.connect("sync-message::element", self.on_sync_message)
 		
-		self.pipeline.set_state(gst.STATE_PLAYING)
+		if self.asyncStart:
+			self.pipeline.set_state(gst.STATE_PAUSED)
+		else:
+			self.pipeline.set_state(gst.STATE_PLAYING)
+	def ready(self):
+		ready = True
+		for s in self.sources.keys():
+			if self.sources[s].hangingConnections > 0:
+				ready = False
+		if ready:
+			self.pipeline.set_state(gst.STATE_PLAYING)
+	
 	def setSource(self, source):
 		#print self.activeSource
 		if source == None:
@@ -142,7 +170,6 @@ class SourceMixer(object):
 			print message
 		elif t == gst.MESSAGE_STATE_CHANGED:
 			if message.src.get_clock():
-				print dir(message.structure)
 				self.setInitial(message.src.get_property("name"), message.src.get_clock().get_time())
 	def on_sync_message(self, bus, message):	
 		if message.structure is None:

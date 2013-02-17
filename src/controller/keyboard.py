@@ -22,6 +22,8 @@ class KeyboardController(Controller):
 			self.mixer.setSource(None)
 		elif keyname == "KP_5":
 			self.mixer.setSource("im1")
+		elif keyname == "KP_6":
+			self.mixer.setSource("im2")
 		elif keyname == "KP_2":
 			self.mixer.setSource("white")
 		else:

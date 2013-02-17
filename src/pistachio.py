@@ -1,17 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import sys, os
-import pygtk, gtk, gobject
-import pygst
-pygst.require("0.10")
-import gst
-import time
+import gtk
+
 
 from interface import Window
-from mixer import Source, SourceMixer
+from mixer import SourceMixer
 from controller.keyboard import KeyboardController
-from utility import requireKwargs
 
 
 resolution = (1200,800)
@@ -24,7 +19,8 @@ class Main:
 		self.window = Window("My Title", resolution)
 		
 		self.mixer = SourceMixer(self.window)
-		self.mixer.addSource("im1", "image", location="../graph.png", resolution=resolution, alpha=0)
+		self.mixer.addSource("im1", "image", location="../media/graph.png", resolution=resolution, alpha=0)
+		self.mixer.addSource("im2", "image", location="../media/pic.jpg", resolution=resolution, alpha=0)
 		self.mixer.addSource("white", "pattern", pattern=3, resolution=resolution, alpha=0)
 		self.player = self.mixer.pipeline
 
