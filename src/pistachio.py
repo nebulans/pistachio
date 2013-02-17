@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import pygtk
+pygtk.require ("2.0")
 import gtk
+import gobject
+gobject.threads_init ()
 
 
 from interface import Window
@@ -37,5 +41,5 @@ class Main:
 	
 
 Main()
-gtk.gdk.threads_init()
+#gtk.gdk.threads_init()
 gtk.main()

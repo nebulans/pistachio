@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import sys, os
-import pygtk, gtk, gobject
-import pygst
-pygst.require("0.10")
-import gst
-import time
+
+import pygtk
+pygtk.require ("2.0")
+import gtk
+
 
 from controller import Controller
 

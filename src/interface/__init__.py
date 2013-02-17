@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import sys, os
-import pygtk, gtk, gobject
+import pygtk
+pygtk.require ("2.0")
+import gtk
 import pygst
 pygst.require("0.10")
 import gst
-import time
 
 class Window:
 	mixer = False

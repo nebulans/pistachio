@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys, os
-import pygtk, gtk, gobject
-import pygst
-pygst.require("0.10")
-import gst
-import time
-
 from utility import requireKwargs
 
 class Controller(object):

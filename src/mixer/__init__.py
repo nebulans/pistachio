@@ -13,7 +13,7 @@ class Source(object):
 	layerIndex = 0
 	lastElement = False
 	hangingConnections = 0
-	def __init__(self, parent, name, type, **kwargs):
+	def __init__(self, parent, name, sourceType, **kwargs):
 		self.parent = parent
 		self.name = name
 		# Add elements common to all sources
@@ -39,7 +39,7 @@ class Source(object):
 		# Create holder for list of elements created
 		self.elements = []
 		# Add initial elements as required		
-		if type == "image":
+		if sourceType == "image":
 			if not requireKwargs(kwargs, ["location"]):
 				print "Incorrect arguments supplied"
 				raise Exception()
@@ -55,7 +55,7 @@ class Source(object):
 			self.decoder.connect("new-decoded-pad", self.new_decoded_pad)
 			self.hangingConnections += 1
 			self.parent.asyncStart = True
-		elif type == "pattern":
+		elif sourceType == "pattern":
 			if not requireKwargs(kwargs, ["pattern"]):
 				print "Incorrect arguments supplied"
 				raise Exception()
@@ -104,9 +104,9 @@ class SourceMixer(object):
 		# Create holder for sources
 		self.sources = {}
 		self.initialTimes = {}
-	def addSource(self, name, type, **kwargs):
+	def addSource(self, name, sourceType, **kwargs):
 		if not self.sources.get(name, False):
-			self.sources[name] = Source(self, name, type,  **kwargs)
+			self.sources[name] = Source(self, name, sourceType,  **kwargs)
 			self.sources[name].lastElement.link(self.mixer)
 			self.sources[name].layerIndex = self.layerIndex
 			self.layerIndex += 1
