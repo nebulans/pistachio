@@ -25,5 +25,8 @@ class KeyboardController(Controller):
 			self.mixer.setSource("im2")
 		elif keyname == "KP_2":
 			self.mixer.setSource("white")
+		elif keyname == "KP_0":
+			print "Toggle"
+			self.mixer.toggleFade()
 		else:
 			print keyname

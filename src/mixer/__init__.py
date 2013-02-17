@@ -136,7 +136,7 @@ class SourceMixer(object):
 		if source == None:
 			# Fade out active layer
 			if self.activeSource:
-				self.sources[self.activeSource].setAlpha(0, self.fadeTime)
+				self.sources[self.activeSource].setAlpha(0, self.getFadeTime())
 				self.activeSource = False
 		elif source in self.sources.keys():
 			if source == self.activeSource:
@@ -146,14 +146,14 @@ class SourceMixer(object):
 				if self.sources[self.activeSource].layerIndex > self.sources[source].layerIndex:
 					# Current active layer on top
 					self.sources[source].setAlpha(1)
-					self.sources[self.activeSource].setAlpha(0, self.fadeTime)
+					self.sources[self.activeSource].setAlpha(0, self.getFadeTime())
 				else:
 					# New layer on top
-					self.sources[source].setAlpha(1, self.fadeTime)
-					self.sources[self.activeSource].setAlpha(0, 0, self.fadeTime)
+					self.sources[source].setAlpha(1, self.getFadeTime())
+					self.sources[self.activeSource].setAlpha(0, 0, self.getFadeTime())
 				self.activeSource = source
 			else:
-				self.sources[source].setAlpha(1, self.fadeTime*2)
+				self.sources[source].setAlpha(1, self.getFadeTime()*2)
 				self.activeSource = source			
 	def setInitial(self, element, time):
 		if not self.initialTimes.get(element, False):
@@ -180,3 +180,11 @@ class SourceMixer(object):
 			imagesink = message.src
 			imagesink.set_property("force-aspect-ratio", True)
 			imagesink.set_xwindow_id(self.window.movie_window.window.xid)
+	def getFadeTime(self):
+		if self.fade:
+			return self.fadeTime
+		else:
+			return 0
+	def toggleFade(self):
+		print "Interact"
+		self.fade = self.fade == False
